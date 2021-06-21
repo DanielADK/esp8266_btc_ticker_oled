@@ -4,7 +4,8 @@
  * @brief   Gets bitcoin data from coindesk's API
  * @version 0.1
  * @date    2021-06-21
- * 
+ * @sources https://buger.dread.cz/simple-esp8266-https-client-without-verification-of-certificate-fingerprint.html
+ *          
  * @copyright Copyright (c) 2021
  * 
  */
