@@ -22,8 +22,8 @@
 
 
 // Setup WiFi
-#define WIFI_SSID "WIFI_SSID"
-#define WIFI_PASSWORD "WIFI_PASSWD"
+#define WIFI_SSID "SSID"
+#define WIFI_PASSWORD "PASSWD"
 #define HOSTNAME "BTC-Ticker"
 
 // Setup API
@@ -34,6 +34,10 @@
 // Setup OLED
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
+#define SCREEN_ADDRESS 0x3C
+
+// Setup delay
+#define DELAY 10
 
 struct Coin {
     String  mName;
@@ -86,19 +90,57 @@ Coin coins[] = {
     0xff, 0xff, 0xe0, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x00, 0x00, 0x00, 0x1f, 0xf0, 0x00, 0x00}
     }
 };
+const int maxCoins = sizeof(coins)/sizeof(coins[0]);
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, D7, D5, D2, D3, D8);
 
 void setup() {
 	Serial.begin(9600);
 
+    if(!display.begin(SSD1306_SWITCHCAPVCC)){
+        Serial.println(F("HALT: OLED allocation failed"));
+        while(1);
+    }
     connectToWiFi();
-    
-    // Serial.println(coins[0].mName);
-    requestData(coins[0]);
-    requestData(coins[1]);
 }
 
 void loop() {
-	
+    for (int i = 0; i < maxCoins; i++) {
+        int price = requestData(coins[i]);
+        for (int s = DELAY; s > 0; s--) {
+            display.clearDisplay();
+            showWait(s);
+            displayData(i, price);
+            delay(1000);
+        }
+    }
+}
+
+void showWait(int seconds) {
+    display.setTextSize(1);
+    display.setCursor(display.width() - 13 - ((String)seconds).length(), display.height() - 8);
+    display.print(seconds);
+    display.print(F("s"));
+}
+
+void drawLogo(const unsigned char logo []) {
+    display.drawBitmap(0,
+        (display.height() + (display.height()/4) - 48) / 2,
+        logo, 48, 48, 1);
+    display.display();
+}
+
+void displayData(int i, int price) {
+    display.setTextSize(2);
+    display.setTextColor(WHITE);
+    display.setCursor(0, 0);
+    display.print(coins[i].mName);
+
+    display.setCursor(display.width() / 2 - 9 - ((String)price).length(), display.height() / 3);
+    display.print("$");
+    display.print(price);
+
+    drawLogo(coins[i].mLogo);
 }
 
 int requestData(Coin singleCoin) {
@@ -157,13 +199,25 @@ void connectToWiFi() {
     Serial.print("Connecting to ");
     Serial.println(WIFI_SSID);
 
+    display.clearDisplay();
+    display.setTextSize(1.5);
+    display.setTextColor(WHITE);
+    display.setCursor(0, 0);
+    display.print(F("Connecting to:"));
+    display.setCursor(0, 20);
+    display.print(F(WIFI_SSID));
+    display.display();
+
     // Connect to WiFi
     WiFi.hostname(HOSTNAME);
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
+    display.setCursor(0, 30);
     while(WiFi.status() != WL_CONNECTED) {
-        delay(4000);
+        delay(500);
         Serial.print(".");
+        display.print(F("."));
+        display.display();
     }
     Serial.println("");
     Serial.println("Connected!");
@@ -171,4 +225,16 @@ void connectToWiFi() {
     Serial.println("");
     Serial.print("WiFi connected with IP address: ");
     Serial.println(WiFi.localIP());
+
+    display.clearDisplay();
+    display.setTextSize(2);
+    display.setTextColor(WHITE);
+    display.setCursor(0, 0);
+    display.print(F("Connected!"));
+    display.setCursor(0, 20);
+    display.setTextSize(1);
+    display.print(F("IP: "));
+    display.print(WiFi.localIP());
+    display.display();
+    delay(1000);
 }
